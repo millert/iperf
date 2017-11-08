@@ -268,12 +268,23 @@ Nread(int fd, char *buf, size_t count, int prot)
 
     while (nleft > 0) {
         r = read(fd, buf, nleft);
-        if (r < 0) {
-            if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
-                break;
-            else
-                return NET_HARDERROR;
-        } else if (r == 0)
+	if (r < 0) {
+	    switch (errno) {
+		case EINTR:
+		continue;
+
+		case EAGAIN:
+#if (EAGAIN != EWOULDBLOCK)
+		case EWOULDBLOCK:
+#endif
+		if (count == nleft)
+		    return NET_SOFTERROR;
+		return count - nleft;
+
+		default:
+		return NET_HARDERROR;
+	    }
+	} else if (r == 0)
             break;
 
         nleft -= r;
@@ -298,10 +309,14 @@ Nwrite(int fd, const char *buf, size_t count, int prot)
 	if (r < 0) {
 	    switch (errno) {
 		case EINTR:
+		continue;
+
 		case EAGAIN:
 #if (EAGAIN != EWOULDBLOCK)
 		case EWOULDBLOCK:
 #endif
+		if (count == nleft)
+		    return NET_SOFTERROR;
 		return count - nleft;
 
 		case ENOBUFS:
@@ -368,6 +383,8 @@ Nsendfile(int fromfd, int tofd, const char *buf, size_t count)
 	if (r < 0) {
 	    switch (errno) {
 		case EINTR:
+		continue;
+
 		case EAGAIN:
 #if (EAGAIN != EWOULDBLOCK)
 		case EWOULDBLOCK:
