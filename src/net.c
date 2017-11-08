@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <errno.h>
+#include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
@@ -55,10 +56,6 @@
 #endif
 #endif /* HAVE_SENDFILE */
 
-#ifdef HAVE_POLL_H
-#include <poll.h>
-#endif /* HAVE_POLL_H */
-
 #include "iperf_util.h"
 #include "net.h"
 #include "timer.h"
@@ -71,25 +68,28 @@ int
 timeout_connect(int s, const struct sockaddr *name, socklen_t namelen,
     int timeout)
 {
-	struct pollfd pfd;
+	fd_set wfds;
 	socklen_t optlen;
-	int flags, optval;
-	int ret;
+	struct timeval tv;
+	struct timeval *timeo = NULL;
+	int optval, ret;
+	int restore = 0;
 
-	flags = 0;
 	if (timeout != -1) {
-		flags = fcntl(s, F_GETFL, 0);
-		if (fcntl(s, F_SETFL, flags | O_NONBLOCK) == -1)
+		tv.tv_sec = timeout / 1000;
+		tv.tv_usec = timeout % 1000;
+		timeo = &tv;
+		if ((restore = setnonblocking(s, 1)) == -1)
 			return -1;
 	}
 
 	if ((ret = connect(s, name, namelen)) != 0 && errno == EINPROGRESS) {
-		pfd.fd = s;
-		pfd.events = POLLOUT;
-		if ((ret = poll(&pfd, 1, timeout)) == 1) {
+		FD_ZERO(&wfds);
+		FD_SET(s, &wfds);
+		if ((ret = select(s + 1, NULL, &wfds, NULL, timeo)) == 1) {
 			optlen = sizeof(optval);
 			if ((ret = getsockopt(s, SOL_SOCKET, SO_ERROR,
-			    &optval, &optlen)) == 0) {
+			    (void *)&optval, &optlen)) == 0) {
 				errno = optval;
 				ret = optval == 0 ? 0 : -1;
 			}
@@ -100,8 +100,8 @@ timeout_connect(int s, const struct sockaddr *name, socklen_t namelen,
 			ret = -1;
 	}
 
-	if (timeout != -1 && fcntl(s, F_SETFL, flags) == -1)
-		ret = -1;
+	if (restore && setnonblocking(s, 0) == -1)
+		return -1;
 
 	return (ret);
 }
@@ -476,6 +476,8 @@ set_tcp_options(int sock, int no_delay, int mss)
 
 /****************************************************************************/
 
+/* enable/disable non-blocking; returns 1 if changed, 0 if not, -1 on error */
+
 int
 setnonblocking(int fd, int nonblocking)
 {
@@ -490,12 +492,13 @@ setnonblocking(int fd, int nonblocking)
 	newflags = flags | (int) O_NONBLOCK;
     else
 	newflags = flags & ~((int) O_NONBLOCK);
-    if (newflags != flags)
-	if (fcntl(fd, F_SETFL, newflags) < 0) {
-	    perror("fcntl(F_SETFL)");
-	    return -1;
-	}
-    return 0;
+    if (newflags == flags)
+	return 0;
+    if (fcntl(fd, F_SETFL, newflags) < 0) {
+	perror("fcntl(F_SETFL)");
+	return -1;
+    }
+    return 1;
 }
 
 /****************************************************************************/
