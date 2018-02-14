@@ -73,6 +73,10 @@
 #include "queue.h"
 #include "cjson.h"
 
+#ifndef __MINGW32__
+#define closesocket(x) close(x)
+#endif /* __MINGW32__ */
+
 typedef uint64_t iperf_size_t;
 
 struct iperf_interval_results

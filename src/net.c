@@ -151,7 +151,7 @@ netdial(int domain, int proto, char *local, int local_port, char *server, int po
 
         if (bind(s, (struct sockaddr *) local_res->ai_addr, local_res->ai_addrlen) < 0) {
 	    saved_errno = errno;
-	    close(s);
+	    closesocket(s);
 	    freeaddrinfo(local_res);
 	    freeaddrinfo(server_res);
 	    errno = saved_errno;
@@ -198,7 +198,7 @@ netdial(int domain, int proto, char *local, int local_port, char *server, int po
     ((struct sockaddr_in *) server_res->ai_addr)->sin_port = htons(port);
     if (timeout_connect(s, (struct sockaddr *) server_res->ai_addr, server_res->ai_addrlen, timeout) < 0 && errno != EINPROGRESS) {
 	saved_errno = errno;
-	close(s);
+	closesocket(s);
 	freeaddrinfo(server_res);
 	errno = saved_errno;
         return -1;
@@ -252,7 +252,7 @@ netannounce(int domain, int proto, char *local, int port)
     if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, 
 		   (void *)&opt, sizeof(opt)) < 0) {
 	saved_errno = errno;
-	close(s);
+	closesocket(s);
 	freeaddrinfo(res);
 	errno = saved_errno;
 	return -1;
@@ -274,7 +274,7 @@ netannounce(int domain, int proto, char *local, int port)
 	if (setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, 
 		       (void *)&opt, sizeof(opt)) < 0) {
 	    saved_errno = errno;
-	    close(s);
+	    closesocket(s);
 	    freeaddrinfo(res);
 	    errno = saved_errno;
 	    return -1;
@@ -284,7 +284,7 @@ netannounce(int domain, int proto, char *local, int port)
 
     if (bind(s, (struct sockaddr *) res->ai_addr, res->ai_addrlen) < 0) {
         saved_errno = errno;
-        close(s);
+        closesocket(s);
 	freeaddrinfo(res);
         errno = saved_errno;
         return -1;
@@ -295,7 +295,7 @@ netannounce(int domain, int proto, char *local, int port)
     if (proto == SOCK_STREAM) {
         if (listen(s, INT_MAX) < 0) {
 	    saved_errno = errno;
-	    close(s);
+	    closesocket(s);
 	    errno = saved_errno;
             return -1;
         }
