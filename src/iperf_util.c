@@ -55,6 +55,7 @@
  * Errors are fatal.
  * Returns 0 on success.
  */
+#ifndef __MINGW32__
 int readentropy(void *out, size_t outsize)
 {
     static FILE *frandom;
@@ -77,7 +78,25 @@ int readentropy(void *out, size_t outsize)
     }
     return 0;
 }
+#else /* __MINGW32__ */
+int readentropy(void *out, size_t outsize)
+{
+    HCRYPTPROV hCryptProv;
 
+    if (!outsize) return 0;
+
+    if (!CryptAcquireContext(&hCryptProv, NULL, NULL, PROV_RSA_FULL, 0)) {
+	if (GetLastError() != NTE_BAD_KEYSET)
+	    iperf_errexit(NULL, "error - failed to acquire crypt context\n");
+	/* No default container, create one */
+	if (!CryptAcquireContext(&hCryptProv, NULL, NULL, PROV_RSA_FULL, CRYPT_NEWKEYSET))
+	    iperf_errexit(NULL, "error - failed to acquire crypt context\n");
+    }
+    if (!CryptGenRandom(hCryptProv, outsize, out))
+	iperf_errexit(NULL, "error - failed to get random bytes\n");
+    return 0;
+}
+#endif /* __MINGW32__ */
 
 /* make_cookie
  *
@@ -165,10 +184,10 @@ timeval_diff(struct timeval * tv0, struct timeval * tv1)
     return time1;
 }
 
+#ifndef __MINGW32__
 void
 cpu_util(double pcpu[3])
 {
-#ifndef __MINGW32__
     static struct timeval last;
     static clock_t clast;
     static struct rusage rlast;
@@ -200,14 +219,66 @@ cpu_util(double pcpu[3])
     pcpu[0] = (((ctemp - clast) * 1000000.0 / CLOCKS_PER_SEC) / timediff) * 100;
     pcpu[1] = (userdiff / timediff) * 100;
     pcpu[2] = (systemdiff / timediff) * 100;
-#endif
 }
+#else /* __MINGW32__ */
+void
+cpu_util(double pcpu[3])
+{
+    static uint64_t user_last;
+    static uint64_t system_last;
+    static struct timeval last;
+    static clock_t clast;
+    FILETIME ctime, etime, stime, utime;
+    uint64_t user_temp;
+    uint64_t system_temp;
+    struct timeval temp;
+    clock_t ctemp;
+    double timediff;
+    double userdiff;
+    double systemdiff;
 
+    if (pcpu == NULL) {
+        gettimeofday(&last, NULL);
+        clast = clock();
+	if (GetProcessTimes(GetCurrentProcess(), &ctime, &etime, &stime, &utime)) {
+	    /* Convert 100-nanosecond units to microseconds */
+	    system_last = (uint64_t)stime.dwHighDateTime << 32;
+	    system_last |= stime.dwLowDateTime;
+	    system_last /= 10;
+	    user_last = (uint64_t)utime.dwHighDateTime << 32;
+	    user_last |= utime.dwLowDateTime;
+	    user_last /= 10;
+	}
+        return;
+    }
+
+    gettimeofday(&temp, NULL);
+    ctemp = clock();
+    if (!GetProcessTimes(GetCurrentProcess(), &ctime, &etime, &stime, &utime))
+	return;
+
+    /* Convert 100-nanosecond units to microseconds */
+    system_temp = ((uint64_t)stime.dwHighDateTime << 32) | stime.dwLowDateTime;
+    system_temp /= 10;
+    user_temp = ((uint64_t)utime.dwHighDateTime << 32) | utime.dwLowDateTime;
+    user_temp /= 10;
+
+    timediff = ((temp.tv_sec * 1000000.0 + temp.tv_usec) -
+                (last.tv_sec * 1000000.0 + last.tv_usec));
+    userdiff = user_temp - user_last;
+    systemdiff = system_temp - system_last;
+
+    pcpu[0] = (((ctemp - clast) * 1000000.0 / CLOCKS_PER_SEC) / timediff) * 100;
+    pcpu[1] = (userdiff / timediff) * 100;
+    pcpu[2] = (systemdiff / timediff) * 100;
+}
+#endif /* __MINGW32__ */
+
+#ifndef __MINGW32__
 const char *
 get_system_info(void)
 {
     static char buf[1024];
-#ifndef __MINGW32__
     struct utsname  uts;
 
     memset(buf, 0, 1024);
@@ -215,11 +286,53 @@ get_system_info(void)
 
     snprintf(buf, sizeof(buf), "%s %s %s %s %s", uts.sysname, uts.nodename, 
 	     uts.release, uts.version, uts.machine);
-#endif
 
     return buf;
 }
+#else /* __MINGW32__ */
+const char *
+get_system_info(void)
+{
+    OSVERSIONINFO osvi;
+    SYSTEM_INFO sys_info;
+    static char buf[1024];
+    char hostname[255 + 1];
+    const char *machine;
 
+    /* Node name */
+    gethostname(hostname, sizeof(hostname));
+    hostname[sizeof(hostname) - 1] = '\0';
+
+    /* Windows version */
+    ZeroMemory(&osvi, sizeof(osvi));
+    osvi.dwOSVersionInfoSize = sizeof(osvi);
+    GetVersionEx(&osvi);
+
+    /* Machine info */
+    ZeroMemory(&sys_info, sizeof(sys_info));
+    GetSystemInfo(&sys_info);
+    switch (sys_info.wProcessorArchitecture) {
+    case PROCESSOR_ARCHITECTURE_AMD64:
+	machine = "x86_64";
+	break;
+    case PROCESSOR_ARCHITECTURE_IA64:
+	machine = "ia64";
+	break;
+    case PROCESSOR_ARCHITECTURE_INTEL:
+	machine = "x86";
+	break;
+    default:
+	machine = "unknown";
+	break;
+    }
+
+    snprintf(buf, sizeof(buf), "Windows %s %d %d.%d %s", hostname,
+	     osvi.dwBuildNumber, osvi.dwMajorVersion, osvi.dwMinorVersion,
+	     machine);
+
+    return buf;
+}
+#endif /* __MINGW32__ */
 
 const char *
 get_optional_features(void)

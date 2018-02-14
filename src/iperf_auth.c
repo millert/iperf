@@ -315,4 +315,50 @@ ssize_t iperf_getpass (char **lineptr, size_t *n, FILE *stream) {
 
     return nread;
 }
+#else /* __MINGW32__ */
+
+#include <windows.h>
+#include <io.h>
+
+ssize_t iperf_getpass (char **lineptr, size_t *n, FILE *stream) {
+    HANDLE h;
+    DWORD old, new;
+    TCHAR buf[1024];
+    DWORD nread;
+
+    /* Turn echo off and fail if we can't. */
+    fflush(stream);
+    h = (HANDLE)_get_osfhandle(fileno(stream));
+    if (!GetConsoleMode(h, &old))
+        return -1;
+    new = old & ~ENABLE_ECHO_INPUT;
+    if (!SetConsoleMode(h, new))
+        return -1;
+
+    /* Read the password. */
+    printf("Password: ");
+    if (!ReadConsole(h, buf, sizeof(buf) / sizeof(buf[0]), &nread, NULL))
+	nread = -1;
+
+    /* Restore terminal. */
+    SetConsoleMode(h, old);
+
+    /* XXX - assumes ASCII not Unicode */
+    if (nread != -1) {
+	char *line;
+
+	/* strip the \n or \r\n chars */
+	while (nread > 0 && (buf[nread] == '\r' || buf[nread] == '\n'))
+	    nread--;
+
+	/* Alloc as needed and copy out to lineptr and n */
+	line = realloc(*lineptr, nread + 1);
+	memcpy(line, buf, nread);
+	line[nread] = '\0';
+	*lineptr = line;
+	*n = nread;
+    }
+
+    return nread;
+}
 #endif /* __MINGW32__ */

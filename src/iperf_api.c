@@ -3444,6 +3444,19 @@ iperf_got_sigend(struct iperf_test *test)
     iperf_errexit(test, "interrupt - %s", iperf_strerror(i_errno));
 }
 
+static int
+iperf_process_exists(pid_t pid)
+{
+#ifdef __MINGW32__
+	HANDLE process = OpenProcess(SYNCHRONIZE, FALSE, pid);
+	DWORD ret = WaitForSingleObject(process, 0);
+	CloseHandle(process);
+	return ret == WAIT_TIMEOUT;
+#else
+	return kill(pid, 0) == 0;
+#endif
+}
+
 /* Try to write a PID file if requested, return -1 on an error. */
 int
 iperf_create_pidfile(struct iperf_test *test)
@@ -3463,7 +3476,7 @@ iperf_create_pidfile(struct iperf_test *test)
 		if (pid > 0) {
 
 		    /* See if the process exists. */
-		    if (kill(pid, 0) == 0) {
+		    if (iperf_process_exists(pid)) {
 			/*
 			 * Make sure not to try to delete existing PID file by
 			 * scribbling over the pathname we'd use to refer to it.
