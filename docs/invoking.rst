@@ -340,7 +340,7 @@ the executable.
    
           -Z, --zerocopy
                  Use a "zero copy" method of sending data, such  as  sendfile(2),
-                 instead of the usual write(2).
+                 instead of the usual send(2).
    
           -O, --omit n
                  Omit the first n seconds of the test, to skip past the TCP slow-
