@@ -73,7 +73,28 @@
 #include "queue.h"
 #include "cjson.h"
 
-#ifndef __MINGW32__
+#ifdef __MINGW32__
+#define sockerrno WSAGetLastError()
+#define set_sockerrno(x) WSASetLastError(x)
+#define connect_in_progress() (WSAGetLastError() == WSAEINPROGRESS || WSAGetLastError() == WSAEWOULDBLOCK)
+#define sockwouldblock() (WSAGetLastError() == WSAEWOULDBLOCK)
+#define sockintr() (WSAGetLastError() == WSAEINTR)
+#define sockbad() (WSAGetLastError() == WSAEBADF)
+#define socknobufs() (WSAGetLastError() == WSAENOBUFS)
+#define set_etimedout() WSASetLastError(WSAETIMEDOUT)
+#define afnosupport() (WSAGetLastError() == WSAEAFNOSUPPORT)
+char *sockstrerror(int errnum);
+#else
+#define sockerrno errno
+#define set_sockerrno(x) (errno = (x))
+#define connect_in_progress() (errno == EINPROGRESS)
+#define sockwouldblock() (errno == EWOULDBLOCK || errno == EAGAIN)
+#define sockintr() (errno == EINTR)
+#define sockbad() (errno == EBADF)
+#define socknobufs() (errno == ENOBUFS || errno == ENOMEM)
+#define set_etimedout() (errno = ETIMEDOUT)
+#define afnosupport() (errno == EAFNOSUPPORT)
+#define sockstrerror(x) strerror(x)
 #define closesocket(x) close(x)
 #endif /* __MINGW32__ */
 

@@ -78,7 +78,7 @@ iperf_server_listen(struct iperf_test *test)
 {
     retry:
     if((test->listener = netannounce(test->settings->domain, Ptcp, test->bind_address, test->server_port)) < 0) {
-	if (errno == EAFNOSUPPORT && (test->settings->domain == AF_INET6 || test->settings->domain == AF_UNSPEC)) {
+	if (afnosupport() && (test->settings->domain == AF_INET6 || test->settings->domain == AF_UNSPEC)) {
 	    /* If we get "Address family not supported by protocol", that
 	    ** probably means we were compiled with IPv6 but the running
 	    ** kernel does not actually do IPv6.  This is not too unusual,
@@ -439,7 +439,7 @@ iperf_run_server(struct iperf_test *test)
 	(void) gettimeofday(&now, NULL);
 	timeout = tmr_timeout(&now);
         result = select(test->max_fd + 1, &read_set, &write_set, NULL, timeout);
-        if (result < 0 && errno != EINTR) {
+        if (result < 0 && !sockintr()) {
 	    cleanup_server(test);
             i_errno = IESELECT;
             return -1;
@@ -487,11 +487,12 @@ iperf_run_server(struct iperf_test *test)
 				    warning("TCP congestion control algorithm not supported");
 				}
 				else {
-				    saved_errno = errno;
+				    saved_errno = sockerrno;
 				    closesocket(s);
 				    cleanup_server(test);
 				    errno = saved_errno;
 				    i_errno = IESETCONGESTION;
+				    set_sockerrno(saved_errno);
 				    return -1;
 				}
 			    } 
@@ -500,11 +501,12 @@ iperf_run_server(struct iperf_test *test)
 			    socklen_t len = TCP_CA_NAME_MAX;
 			    char ca[TCP_CA_NAME_MAX + 1];
 			    if (getsockopt(s, IPPROTO_TCP, TCP_CONGESTION, ca, &len) < 0) {
-				saved_errno = errno;
+				saved_errno = sockerrno;
 				closesocket(s);
 				cleanup_server(test);
 				errno = saved_errno;
 				i_errno = IESETCONGESTION;
+				set_sockerrno(saved_errno);
 				return -1;
 			    }
 			    test->congestion_used = strdup(ca);

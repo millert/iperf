@@ -76,10 +76,11 @@ iperf_create_streams(struct iperf_test *test)
 	if (test->protocol->id == Ptcp) {
 	    if (test->congestion) {
 		if (setsockopt(s, IPPROTO_TCP, TCP_CONGESTION, test->congestion, strlen(test->congestion)) < 0) {
-		    saved_errno = errno;
+		    saved_errno = sockerrno;
 		    closesocket(s);
 		    errno = saved_errno;
 		    i_errno = IESETCONGESTION;
+		    set_sockerrno(saved_errno);
 		    return -1;
 		} 
 	    }
@@ -87,10 +88,11 @@ iperf_create_streams(struct iperf_test *test)
 		socklen_t len = TCP_CA_NAME_MAX;
 		char ca[TCP_CA_NAME_MAX + 1];
 		if (getsockopt(s, IPPROTO_TCP, TCP_CONGESTION, ca, &len) < 0) {
-		    saved_errno = errno;
+		    saved_errno = sockerrno;
 		    closesocket(s);
 		    errno = saved_errno;
 		    i_errno = IESETCONGESTION;
+		    set_sockerrno(saved_errno);
 		    return -1;
 		}
 		test->congestion_used = strdup(ca);
@@ -307,7 +309,7 @@ iperf_handle_message_client(struct iperf_test *test)
                 i_errno = IECTRLREAD;
                 return -1;
             }
-            errno = ntohl(err);
+            set_sockerrno(ntohl(err));
             return -1;
         default:
             i_errno = IEMESSAGE;
@@ -485,7 +487,7 @@ iperf_run_client(struct iperf_test * test)
 	(void) gettimeofday(&now, NULL);
 	timeout = tmr_timeout(&now);
 	result = select(test->max_fd + 1, &read_set, &write_set, NULL, timeout);
-	if (result < 0 && errno != EINTR) {
+	if (result < 0 && !sockintr()) {
   	    i_errno = IESELECT;
 	    return -1;
 	}

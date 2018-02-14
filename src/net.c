@@ -85,18 +85,18 @@ timeout_connect(int s, const struct sockaddr *name, socklen_t namelen,
 			return -1;
 	}
 
-	if ((ret = connect(s, name, namelen)) != 0 && errno == EINPROGRESS) {
+	if ((ret = connect(s, name, namelen)) != 0 && connect_in_progress()) {
 		FD_ZERO(&wfds);
 		FD_SET(s, &wfds);
 		if ((ret = select(s + 1, NULL, &wfds, NULL, timeo)) == 1) {
 			optlen = sizeof(optval);
 			if ((ret = getsockopt(s, SOL_SOCKET, SO_ERROR,
 			    (void *)&optval, &optlen)) == 0) {
-				errno = optval;
+				set_sockerrno(optval);
 				ret = optval == 0 ? 0 : -1;
 			}
 		} else if (ret == 0) {
-			errno = ETIMEDOUT;
+			set_etimedout();
 			ret = -1;
 		} else
 			ret = -1;
@@ -150,11 +150,11 @@ netdial(int domain, int proto, char *local, int local_port, char *server, int po
         }
 
         if (bind(s, (struct sockaddr *) local_res->ai_addr, local_res->ai_addrlen) < 0) {
-	    saved_errno = errno;
+	    saved_errno = sockerrno;
 	    closesocket(s);
 	    freeaddrinfo(local_res);
 	    freeaddrinfo(server_res);
-	    errno = saved_errno;
+	    set_sockerrno(saved_errno);
             return -1;
 	}
         freeaddrinfo(local_res);
@@ -196,11 +196,11 @@ netdial(int domain, int proto, char *local, int local_port, char *server, int po
     }
 
     ((struct sockaddr_in *) server_res->ai_addr)->sin_port = htons(port);
-    if (timeout_connect(s, (struct sockaddr *) server_res->ai_addr, server_res->ai_addrlen, timeout) < 0 && errno != EINPROGRESS) {
-	saved_errno = errno;
+    if (timeout_connect(s, (struct sockaddr *) server_res->ai_addr, server_res->ai_addrlen, timeout) < 0 && !connect_in_progress()) {
+	saved_errno = sockerrno;
 	closesocket(s);
 	freeaddrinfo(server_res);
-	errno = saved_errno;
+	set_sockerrno(saved_errno);
         return -1;
     }
 
@@ -251,10 +251,10 @@ netannounce(int domain, int proto, char *local, int port)
     opt = 1;
     if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, 
 		   (void *)&opt, sizeof(opt)) < 0) {
-	saved_errno = errno;
+	saved_errno = sockerrno;
 	closesocket(s);
 	freeaddrinfo(res);
-	errno = saved_errno;
+	set_sockerrno(saved_errno);
 	return -1;
     }
     /*
@@ -273,20 +273,20 @@ netannounce(int domain, int proto, char *local, int port)
 	    opt = 1;
 	if (setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, 
 		       (void *)&opt, sizeof(opt)) < 0) {
-	    saved_errno = errno;
+	    saved_errno = sockerrno;
 	    closesocket(s);
 	    freeaddrinfo(res);
-	    errno = saved_errno;
+	    set_sockerrno(saved_errno);
 	    return -1;
 	}
     }
 #endif /* IPV6_V6ONLY */
 
     if (bind(s, (struct sockaddr *) res->ai_addr, res->ai_addrlen) < 0) {
-        saved_errno = errno;
+	saved_errno = sockerrno;
         closesocket(s);
 	freeaddrinfo(res);
-        errno = saved_errno;
+	set_sockerrno(saved_errno);
         return -1;
     }
 
@@ -294,9 +294,9 @@ netannounce(int domain, int proto, char *local, int port)
     
     if (proto == SOCK_STREAM) {
         if (listen(s, INT_MAX) < 0) {
-	    saved_errno = errno;
+	    saved_errno = sockerrno;
 	    closesocket(s);
-	    errno = saved_errno;
+	    set_sockerrno(saved_errno);
             return -1;
         }
     }
@@ -318,27 +318,20 @@ Nread(int fd, char *buf, size_t count, int prot)
     while (nleft > 0) {
         r = recv(fd, buf, nleft, 0);
 	if (r < 0) {
-	    switch (errno) {
-		case EINTR:
+	    if (sockintr())
 		continue;
-
-		case EAGAIN:
-#if (EAGAIN != EWOULDBLOCK)
-		case EWOULDBLOCK:
-#endif
-		if (count == nleft)
-		    return NET_SOFTERROR;
-		return count - nleft;
-
-		default:
-		return NET_HARDERROR;
-	    }
-	} else if (r == 0)
+	    if (sockwouldblock())
+		break;
+	    return NET_HARDERROR;
+	}
+	if (r == 0)
             break;
 
         nleft -= r;
         buf += r;
     }
+    if (r < 0 && count == nleft)
+	return NET_SOFTERROR;
     return count - nleft;
 }
 
@@ -356,25 +349,15 @@ Nwrite(int fd, const char *buf, size_t count, int prot)
     while (nleft > 0) {
 	r = send(fd, buf, nleft, 0);
 	if (r < 0) {
-	    switch (errno) {
-		case EINTR:
+	    if (sockintr())
 		continue;
-
-		case EAGAIN:
-#if (EAGAIN != EWOULDBLOCK)
-		case EWOULDBLOCK:
-#endif
-		if (count == nleft)
-		    return NET_SOFTERROR;
-		return count - nleft;
-
-		case ENOBUFS:
+	    if (sockwouldblock())
+		break;
+	    if (socknobufs())
 		return NET_SOFTERROR;
-
-		default:
-		return NET_HARDERROR;
-	    }
-	} else if (r == 0)
+	    return NET_HARDERROR;
+	}
+	if (r == 0)
 	    return NET_SOFTERROR;
 	nleft -= r;
 	buf += r;
@@ -430,31 +413,21 @@ Nsendfile(int fromfd, int tofd, const char *buf, size_t count)
 	errno = ENOSYS;
 #endif
 	if (r < 0) {
-	    switch (errno) {
-		case EINTR:
+	    if (sockintr())
 		continue;
-
-		case EAGAIN:
-#if (EAGAIN != EWOULDBLOCK)
-		case EWOULDBLOCK:
-#endif
-		if (count == nleft)
-		    return NET_SOFTERROR;
-		return count - nleft;
-
-		case ENOBUFS:
-		case ENOMEM:
+	    if (sockwouldblock())
+		break;
+	    if (socknobufs())
 		return NET_SOFTERROR;
-
-		default:
-		return NET_HARDERROR;
-	    }
+	    return NET_HARDERROR;
 	}
 #ifdef linux
-	else if (r == 0)
+	if (r == 0)
 	    return NET_SOFTERROR;
 #endif
     }
+    if (r < 0 && count == nleft)
+	return NET_SOFTERROR;
     return count;
 #else /* HAVE_SENDFILE */
     errno = ENOSYS;	/* error if somehow get called without HAVE_SENDFILE */

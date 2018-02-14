@@ -34,6 +34,26 @@
 #include "iperf.h"
 #include "iperf_api.h"
 
+#ifdef __MINGW32__
+char *
+sockstrerror(int errnum)
+{
+    static char errbuf[1024];
+
+    if (FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM|FORMAT_MESSAGE_IGNORE_INSERTS,
+	NULL, errnum, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+	errbuf, sizeof(errbuf), NULL)) {
+	/* Terminate error string at first newline */
+	errbuf[strcspn(errbuf, "\r\n")] = '\0';
+    } else {
+	/* Unknown error number */
+	snprintf(errbuf, sizeof(errbuf), "Error %d");
+    }
+
+    return errbuf;
+}
+#endif /* __MINGW32__ */
+
 /* Do a printf to stderr. */
 void
 iperf_err(struct iperf_test *test, const char *format, ...)
@@ -86,8 +106,8 @@ char *
 iperf_strerror(int int_errno)
 {
     static char errstr[256];
-    int len, perr, herr;
-    perr = herr = 0;
+    int len, perr = 0;
+    int serr = 0;
 
     len = sizeof(errstr);
     memset(errstr, 0, len);
@@ -183,16 +203,15 @@ iperf_strerror(int int_errno)
             break;
         case IELISTEN:
             snprintf(errstr, len, "unable to start listener for connections");
-            perr = 1;
+            serr = 1;
             break;
         case IECONNECT:
             snprintf(errstr, len, "unable to connect to server");
-            perr = 1;
+            serr = 1;
             break;
         case IEACCEPT:
             snprintf(errstr, len, "unable to accept connection from client");
-            herr = 1;
-            perr = 1;
+            serr = 1;
             break;
         case IESENDCOOKIE:
             snprintf(errstr, len, "unable to send cookie to server");
@@ -204,11 +223,11 @@ iperf_strerror(int int_errno)
             break;
         case IECTRLWRITE:
             snprintf(errstr, len, "unable to write to the control socket");
-            perr = 1;
+            serr = 1;
             break;
         case IECTRLREAD:
             snprintf(errstr, len, "unable to read from the control socket");
-            perr = 1;
+            serr = 1;
             break;
         case IECTRLCLOSE:
             snprintf(errstr, len, "control socket has closed unexpectedly");
@@ -218,19 +237,19 @@ iperf_strerror(int int_errno)
             break;
         case IESENDMESSAGE:
             snprintf(errstr, len, "unable to send control message");
-            perr = 1;
+            serr = 1;
             break;
         case IERECVMESSAGE:
             snprintf(errstr, len, "unable to receive control message");
-            perr = 1;
+            serr = 1;
             break;
         case IESENDPARAMS:
             snprintf(errstr, len, "unable to send parameters to server");
-            perr = 1;
+            serr = 1;
             break;
         case IERECVPARAMS:
             snprintf(errstr, len, "unable to receive parameters from client");
-            perr = 1;
+            serr = 1;
             break;
         case IEPACKAGERESULTS:
             snprintf(errstr, len, "unable to package results");
@@ -238,15 +257,15 @@ iperf_strerror(int int_errno)
             break;
         case IESENDRESULTS:
             snprintf(errstr, len, "unable to send results");
-            perr = 1;
+            serr = 1;
             break;
         case IERECVRESULTS:
             snprintf(errstr, len, "unable to receive results");
-            perr = 1;
+            serr = 1;
             break;
         case IESELECT:
             snprintf(errstr, len, "select failed");
-            perr = 1;
+            serr = 1;
             break;
         case IECLIENTTERM:
             snprintf(errstr, len, "the client has terminated");
@@ -259,38 +278,38 @@ iperf_strerror(int int_errno)
             break;
         case IESETNODELAY:
             snprintf(errstr, len, "unable to set TCP/SCTP NODELAY");
-            perr = 1;
+            serr = 1;
             break;
         case IESETMSS:
             snprintf(errstr, len, "unable to set TCP/SCTP MSS");
-            perr = 1;
+            serr = 1;
             break;
         case IESETBUF:
             snprintf(errstr, len, "unable to set socket buffer size");
-            perr = 1;
+            serr = 1;
             break;
         case IESETTOS:
             snprintf(errstr, len, "unable to set IP TOS");
-            perr = 1;
+            serr = 1;
             break;
         case IESETCOS:
             snprintf(errstr, len, "unable to set IPv6 traffic class");
-            perr = 1;
+            serr = 1;
             break;
         case IESETFLOW:
             snprintf(errstr, len, "unable to set IPv6 flow label");
             break;
         case IEREUSEADDR:
             snprintf(errstr, len, "unable to reuse address on socket");
-            perr = 1;
+            serr = 1;
             break;
         case IENONBLOCKING:
             snprintf(errstr, len, "unable to set socket to non-blocking");
-            perr = 1;
+            serr = 1;
             break;
         case IESETWINDOWSIZE:
             snprintf(errstr, len, "unable to set socket window size");
-            perr = 1;
+            serr = 1;
             break;
         case IEPROTOCOL:
             snprintf(errstr, len, "protocol does not exist");
@@ -305,34 +324,31 @@ iperf_strerror(int int_errno)
 	    break;
         case IECREATESTREAM:
             snprintf(errstr, len, "unable to create a new stream");
-            herr = 1;
             perr = 1;
             break;
         case IEINITSTREAM:
             snprintf(errstr, len, "unable to initialize stream");
-            herr = 1;
-            perr = 1;
+            serr = 1;
             break;
         case IESTREAMLISTEN:
             snprintf(errstr, len, "unable to start stream listener");
-            perr = 1;
+            serr = 1;
             break;
         case IESTREAMCONNECT:
             snprintf(errstr, len, "unable to connect stream");
-            herr = 1;
-            perr = 1;
+            serr = 1;
             break;
         case IESTREAMACCEPT:
             snprintf(errstr, len, "unable to accept stream connection");
-            perr = 1;
+            serr = 1;
             break;
         case IESTREAMWRITE:
             snprintf(errstr, len, "unable to write to stream socket");
-            perr = 1;
+            serr = 1;
             break;
         case IESTREAMREAD:
             snprintf(errstr, len, "unable to read from stream socket");
-            perr = 1;
+            serr = 1;
             break;
         case IESTREAMCLOSE:
             snprintf(errstr, len, "stream socket has closed unexpectedly");
@@ -358,19 +374,19 @@ iperf_strerror(int int_errno)
             break;
 	case IEV6ONLY:
 	    snprintf(errstr, len, "Unable to set/reset IPV6_V6ONLY");
-	    perr = 1;
+	    serr = 1;
 	    break;
         case IESETSCTPDISABLEFRAG:
             snprintf(errstr, len, "unable to set SCTP_DISABLE_FRAGMENTS");
-            perr = 1;
+            serr = 1;
             break;
         case IESETSCTPNSTREAM:
             snprintf(errstr, len, "unable to set SCTP_INIT num of SCTP streams\n");
-            perr = 1;
+            serr = 1;
             break;
 	case IESETPACING:
 	    snprintf(errstr, len, "unable to set socket pacing");
-	    perr = 1;
+	    serr = 1;
 	    break;
 	case IESETBUF2:
 	    snprintf(errstr, len, "socket buffer size not set correctly");
@@ -378,10 +394,12 @@ iperf_strerror(int int_errno)
 	
     }
 
-    if (herr || perr)
+    if (perr || serr)
         strncat(errstr, ": ", len - strlen(errstr) - 1);
-    if (errno && perr)
+    if (perr && errno)
         strncat(errstr, strerror(errno), len - strlen(errstr) - 1);
+    else if (serr && sockerrno)
+        strncat(errstr, sockstrerror(sockerrno), len - strlen(errstr) - 1);
 
     return errstr;
 }

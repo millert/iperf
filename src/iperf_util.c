@@ -144,7 +144,7 @@ is_closed(int fd)
     tv.tv_usec = 0;
 
     if (select(fd+1, &readset, NULL, NULL, &tv) < 0) {
-        if (errno == EBADF)
+        if (sockbad())
             return 1;
     }
     return 0;
