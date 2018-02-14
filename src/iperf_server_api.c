@@ -358,6 +358,8 @@ create_server_omit_timer(struct iperf_test * test)
 static void
 cleanup_server(struct iperf_test *test)
 {
+    int saved_errno = errno;
+
     /* Close open test sockets */
     if (test->ctrl_sck) {
 	closesocket(test->ctrl_sck);
@@ -387,6 +389,8 @@ cleanup_server(struct iperf_test *test)
         tmr_cancel(test->timer);
         test->timer = NULL;
     }
+
+    errno = saved_errno;
 }
 
 
