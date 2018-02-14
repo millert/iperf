@@ -55,6 +55,25 @@ fi
 # Checks for header files.
 AC_HEADER_STDC
 
+case $host_os in
+    *mingw*)
+	# Use _chsize() instead of ftruncate() on mingw
+	AC_CHECK_FUNC([ftruncate], [], [
+	    AC_DEFINE([ftruncate], [_chsize], [Define to _chsize on Windows.])
+	])
+
+	# MINGW doesn't include mmap, link with -lmman
+	# from https://github.com/witwall/mman-win32
+	AC_SEARCH_LIBS(mmap, [mman], [], [
+	echo "mmap() required, see https://github.com/witwall/mman-win32"
+	exit 1
+	])
+
+	# MINGW requires some extra libs
+	LIBS="$LIBS -lws2_32 -lgdi32 -lcrypt32"
+	;;
+esac
+
 # Check for systems which need -lsocket and -lnsl
 #AX_LIB_SOCKET_NSL
 
@@ -78,6 +97,12 @@ exit 1
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
+
+# Check for sys/select.h (some systems have select() and macros in sys/types.h)
+AC_CHECK_HEADERS([sys/select.h])
+
+# Networking headers
+AC_CHECK_HEADERS([netdb.h arpa/inet.h netinet/in.h netinet/tcp.h])
 
 # Check for SCTP support
 AC_CHECK_HEADERS([sys/socket.h])

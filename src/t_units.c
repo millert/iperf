@@ -24,6 +24,8 @@
  * This code is distributed under a BSD style license, see the LICENSE
  * file for complete information.
  */
+#include "iperf_config.h"
+
 #include <assert.h>
 #ifdef HAVE_STDINT_H
 #include <stdint.h>

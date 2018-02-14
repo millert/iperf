@@ -36,11 +36,16 @@
 #ifdef HAVE_STDINT_H
 #include <stdint.h>
 #endif
-#include <sys/socket.h>
 #include <sys/types.h>
+#ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
+#endif /* HAVE_NETINET_IN_H */
+#ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
+#endif /* HAVE_ARPA_INET_H */
+#ifdef HAVE_NETDB_H
 #include <netdb.h>
+#endif /* HAVE_NETDB_H */
 
 #include "iperf.h"
 #include "iperf_api.h"
@@ -57,6 +62,12 @@ int
 main(int argc, char **argv)
 {
     struct iperf_test *test;
+
+#ifdef __MINGW32__
+    struct WSAData wsa_data;
+    if (WSAStartup(MAKEWORD(2, 2), &wsa_data) != 0)
+	iperf_err(NULL, "WSAStartup failed with %lu", GetLastError());
+#endif
 
     // XXX: Setting the process affinity requires root on most systems.
     //      Is this a feature we really need?
@@ -130,11 +141,14 @@ run(struct iperf_test *test)
     if (setjmp(sigend_jmp_buf))
 	iperf_got_sigend(test);
 
+#ifdef SIGPIPE
     /* Ignore SIGPIPE to simplify error handling */
     signal(SIGPIPE, SIG_IGN);
+#endif
 
     switch (test->role) {
         case 's':
+#ifndef __MINGW32__
 	    if (test->daemon) {
 		int rc;
 		rc = daemon(0, 0);
@@ -143,6 +157,7 @@ run(struct iperf_test *test)
 		    iperf_errexit(test, "error - %s", iperf_strerror(i_errno));
 		}
 	    }
+#endif
 	    if (iperf_create_pidfile(test) < 0) {
 		i_errno = IEPIDFILE;
 		iperf_errexit(test, "error - %s", iperf_strerror(i_errno));
@@ -172,7 +187,9 @@ run(struct iperf_test *test)
     }
 
     iperf_catch_sigend(SIG_DFL);
+#ifdef SIGPIPE
     signal(SIGPIPE, SIG_DFL);
+#endif
 
     return 0;
 }

@@ -37,11 +37,11 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdarg.h>
-#include <sys/select.h>
 #include <sys/types.h>
-#include <sys/time.h>
+#ifndef __MINGW32__
 #include <sys/resource.h>
 #include <sys/utsname.h>
+#endif
 #include <time.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -168,6 +168,7 @@ timeval_diff(struct timeval * tv0, struct timeval * tv1)
 void
 cpu_util(double pcpu[3])
 {
+#ifndef __MINGW32__
     static struct timeval last;
     static clock_t clast;
     static struct rusage rlast;
@@ -199,12 +200,14 @@ cpu_util(double pcpu[3])
     pcpu[0] = (((ctemp - clast) * 1000000.0 / CLOCKS_PER_SEC) / timediff) * 100;
     pcpu[1] = (userdiff / timediff) * 100;
     pcpu[2] = (systemdiff / timediff) * 100;
+#endif
 }
 
 const char *
 get_system_info(void)
 {
     static char buf[1024];
+#ifndef __MINGW32__
     struct utsname  uts;
 
     memset(buf, 0, 1024);
@@ -212,6 +215,7 @@ get_system_info(void)
 
     snprintf(buf, sizeof(buf), "%s %s %s %s %s", uts.sysname, uts.nodename, 
 	     uts.release, uts.version, uts.machine);
+#endif
 
     return buf;
 }
@@ -402,7 +406,7 @@ iperf_dump_fdset(FILE *fp, char *str, int nfds, fd_set *fds)
  * daemon(3) implementation for systems lacking one.
  * Cobbled together from various daemon(3) implementations,
  * not intended to be general-purpose. */
-#ifndef HAVE_DAEMON
+#if !defined(HAVE_DAEMON) && !defined(__MINGW32__)
 int daemon(int nochdir, int noclose)
 {
     pid_t pid = 0;

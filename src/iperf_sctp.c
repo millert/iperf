@@ -31,13 +31,14 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
-#include <sys/socket.h>
 #include <sys/types.h>
-#include <netinet/in.h>
-#include <netdb.h>
 #include <sys/time.h>
-#include <sys/select.h>
-
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif /* HAVE_NETINET_IN_H */
+#ifdef HAVE_NETDB_H
+#include <netdb.h>
+#endif /* HAVE_NETDB_H */
 #ifdef HAVE_NETINET_SCTP_H
 #include <netinet/sctp.h>
 #endif /* HAVE_NETINET_SCTP_H */

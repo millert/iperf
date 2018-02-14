@@ -24,6 +24,8 @@
  * This code is distributed under a BSD style license, see the LICENSE
  * file for complete information.
  */
+#include "iperf_config.h"
+
 #include <errno.h>
 #include <setjmp.h>
 #include <stdio.h>
@@ -32,10 +34,12 @@
 #include <unistd.h>
 #include <signal.h>
 #include <sys/types.h>
+#ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
-#include <sys/select.h>
-#include <sys/uio.h>
+#endif /* HAVE_NETINET_IN_H */
+#ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
+#endif /* HAVE_ARPA_INET_H */
 
 #include "iperf.h"
 #include "iperf_api.h"
@@ -341,6 +345,7 @@ iperf_connect(struct iperf_test *test)
     FD_SET(test->ctrl_sck, &test->read_set);
     if (test->ctrl_sck > test->max_fd) test->max_fd = test->ctrl_sck;
 
+#ifdef TCP_MAXSEG
     int opt;
     socklen_t len;
 
@@ -365,6 +370,9 @@ iperf_connect(struct iperf_test *test)
     if (test->verbose) {
 	printf("Control connection MSS %d\n", test->ctrl_sck_mss);
     }
+#else
+    test->ctrl_sck_mss = 0;
+#endif
 
     /*
      * If we're doing a UDP test and the block size wasn't explicitly

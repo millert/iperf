@@ -1,5 +1,8 @@
 /* src/iperf_config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Define to 1 if you have the <arpa/inet.h> header file. */
+#undef HAVE_ARPA_INET_H
+
 /* Define to 1 if you have the `cpuset_setaffinity' function. */
 #undef HAVE_CPUSET_SETAFFINITY
 
@@ -27,8 +30,17 @@
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 
+/* Define to 1 if you have the <netdb.h> header file. */
+#undef HAVE_NETDB_H
+
+/* Define to 1 if you have the <netinet/in.h> header file. */
+#undef HAVE_NETINET_IN_H
+
 /* Define to 1 if you have the <netinet/sctp.h> header file. */
 #undef HAVE_NETINET_SCTP_H
+
+/* Define to 1 if you have the <netinet/tcp.h> header file. */
+#undef HAVE_NETINET_TCP_H
 
 /* Define to 1 if you have the `sched_setaffinity' function. */
 #undef HAVE_SCHED_SETAFFINITY
@@ -65,6 +77,9 @@
 
 /* Define to 1 if you have the <sys/endian.h> header file. */
 #undef HAVE_SYS_ENDIAN_H
+
+/* Define to 1 if you have the <sys/select.h> header file. */
+#undef HAVE_SYS_SELECT_H
 
 /* Define to 1 if you have the <sys/socket.h> header file. */
 #undef HAVE_SYS_SOCKET_H
@@ -113,3 +128,6 @@
 
 /* Define to empty if `const' does not conform to ANSI C. */
 #undef const
+
+/* Define to _chsize on Windows. */
+#undef ftruncate

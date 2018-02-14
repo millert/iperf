@@ -27,19 +27,23 @@
 #ifndef __IPERF_H
 #define __IPERF_H
 
-#include "iperf_config.h"
-
 #include <sys/time.h>
 #include <sys/types.h>
 #ifdef HAVE_STDINT_H
 #include <stdint.h>
 #endif
+#ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>
+#endif
+#ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
+#endif
 #ifndef _GNU_SOURCE
 # define _GNU_SOURCE
 #endif
+#ifdef HAVE_NETINET_TCP_H
 #include <netinet/tcp.h>
+#endif
 
 #if defined(HAVE_CPUSET_SETAFFINITY)
 #include <sys/param.h>
@@ -56,6 +60,13 @@
 #   define PRIu64		"llu"
 #  endif
 # endif
+#endif
+
+#ifdef __MINGW32__
+#include <w32api.h>
+#include <winsock2.h>
+#include <windows.h>
+#include <ws2tcpip.h>
 #endif
 
 #include "timer.h"

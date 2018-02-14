@@ -29,8 +29,12 @@
 
 #include "iperf_config.h"
 #include "cjson.h"
+#ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>
+#endif
 #include <stddef.h>
+
+struct timeval;
 
 int readentropy(void *out, size_t outsize);
 

@@ -42,14 +42,16 @@
  *
  * I think MS Windows does support TCP_INFO, but iperf3 does not currently support Windows.
  */
+#include "iperf_config.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/param.h>
 #include <sys/types.h>
-#include <sys/socket.h>
 #include <string.h>
+#ifdef HAVE_INET_IN_H
 #include <netinet/in.h>
+#endif
 #include <errno.h>
 
 #include "iperf.h"

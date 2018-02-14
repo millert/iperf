@@ -24,20 +24,20 @@
  * This code is distributed under a BSD style license, see the LICENSE
  * file for complete information.
  */
+#include "iperf_config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 #include <unistd.h>
 #include <assert.h>
-#include <sys/socket.h>
 #include <sys/types.h>
+#ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
+#endif
 #ifdef HAVE_STDINT_H
 #include <stdint.h>
 #endif
-#include <sys/time.h>
-#include <sys/select.h>
 
 #include "iperf.h"
 #include "iperf_api.h"
@@ -358,7 +358,7 @@ iperf_udp_accept(struct iperf_test *test)
      * of the socket to the client.
      */
     len = sizeof(sa_peer);
-    if ((sz = recvfrom(test->prot_listener, &buf, sizeof(buf), 0, (struct sockaddr *) &sa_peer, &len)) < 0) {
+    if ((sz = recvfrom(test->prot_listener, (void *)&buf, sizeof(buf), 0, (struct sockaddr *) &sa_peer, &len)) < 0) {
         i_errno = IESTREAMACCEPT;
         return -1;
     }
@@ -427,7 +427,7 @@ iperf_udp_accept(struct iperf_test *test)
 
     /* Let the client know we're ready "accept" another UDP "stream" */
     buf = 987654321;		/* any content will work here */
-    if (send(s, &buf, sizeof(buf), 0) < 0) {
+    if (send(s, (void *)&buf, sizeof(buf), 0) < 0) {
         i_errno = IESTREAMWRITE;
         return -1;
     }
@@ -537,7 +537,7 @@ iperf_udp_connect(struct iperf_test *test)
      * The server learns our address by obtaining its peer's address.
      */
     buf = 123456789;		/* this can be pretty much anything */
-    if (send(s, &buf, sizeof(buf), 0) < 0) {
+    if (send(s, (void *)&buf, sizeof(buf), 0) < 0) {
         // XXX: Should this be changed to IESTREAMCONNECT? 
         i_errno = IESTREAMWRITE;
         return -1;
@@ -546,7 +546,7 @@ iperf_udp_connect(struct iperf_test *test)
     /*
      * Wait until the server replies back to us.
      */
-    if ((sz = recv(s, &buf, sizeof(buf), 0)) < 0) {
+    if ((sz = recv(s, (void *)&buf, sizeof(buf), 0)) < 0) {
         i_errno = IESTREAMREAD;
         return -1;
     }

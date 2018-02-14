@@ -34,7 +34,9 @@
 /* FreeBSD needs _WITH_GETLINE to enable the getline() declaration */
 #define _WITH_GETLINE
 #include <stdio.h>
+#ifndef __MINGW32__
 #include <termios.h>
+#endif
 
 #if defined(HAVE_SSL)
 
@@ -281,6 +283,7 @@ int decode_auth_setting(int enable_debug, char *authtoken, const char *private_k
 
 #endif //HAVE_SSL
 
+#ifndef __MINGW32__
 ssize_t iperf_getpass (char **lineptr, size_t *n, FILE *stream) {
     struct termios old, new;
     ssize_t nread;
@@ -312,5 +315,4 @@ ssize_t iperf_getpass (char **lineptr, size_t *n, FILE *stream) {
 
     return nread;
 }
-
-
+#endif /* __MINGW32__ */

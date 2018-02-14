@@ -29,13 +29,13 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <errno.h>
-#include <sys/select.h>
-#include <sys/socket.h>
 #include <sys/types.h>
+#ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <assert.h>
+#endif /* HAVE_NETINET_IN_H */
+#ifdef HAVE_NETDB_H
 #include <netdb.h>
+#endif /* HAVE_NETDB_H */
 #include <string.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -57,6 +57,7 @@
 #endif
 #endif /* HAVE_SENDFILE */
 
+#include "iperf.h"
 #include "iperf_util.h"
 #include "net.h"
 #include "timer.h"
@@ -463,6 +464,7 @@ Nsendfile(int fromfd, int tofd, const char *buf, size_t count)
 
 /*************************************************************************/
 
+#ifndef __MINGW32__
 int
 setnonblocking(int fd, int nonblocking)
 {
@@ -485,6 +487,16 @@ setnonblocking(int fd, int nonblocking)
     }
     return 1;
 }
+#else /* __MINGW32__ */
+int
+setnonblocking(int fd, int nonblocking)
+{
+    u_long arg = nonblocking;
+    if (ioctlsocket((SOCKET)fd, FIONBIO, &arg) == -1)
+	return -1;
+    return 1;
+}
+#endif /* __MINGW32__ */
 
 /****************************************************************************/
 

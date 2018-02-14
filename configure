@@ -12245,6 +12245,90 @@ $as_echo "#define STDC_HEADERS 1" >>confdefs.h
 fi
 
 
+case $host_os in
+    *mingw*)
+	# Use _chsize() instead of ftruncate() on mingw
+	ac_fn_c_check_func "$LINENO" "ftruncate" "ac_cv_func_ftruncate"
+if test "x$ac_cv_func_ftruncate" = xyes; then :
+
+else
+
+
+$as_echo "#define ftruncate _chsize" >>confdefs.h
+
+
+fi
+
+
+	# MINGW doesn't include mmap, link with -lmman
+	# from https://github.com/witwall/mman-win32
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing mmap" >&5
+$as_echo_n "checking for library containing mmap... " >&6; }
+if ${ac_cv_search_mmap+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char mmap ();
+int
+main ()
+{
+return mmap ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' mman; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_mmap=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_mmap+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_mmap+:} false; then :
+
+else
+  ac_cv_search_mmap=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_mmap" >&5
+$as_echo "$ac_cv_search_mmap" >&6; }
+ac_res=$ac_cv_search_mmap
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+else
+
+	echo "mmap() required, see https://github.com/witwall/mman-win32"
+	exit 1
+
+fi
+
+
+	# MINGW requires some extra libs
+	LIBS="$LIBS -lws2_32 -lgdi32 -lcrypt32"
+	;;
+esac
+
 # Check for systems which need -lsocket and -lnsl
 #AX_LIB_SOCKET_NSL
 
@@ -12518,6 +12602,35 @@ if test $ac_cv_c_const = no; then
 $as_echo "#define const /**/" >>confdefs.h
 
 fi
+
+
+# Check for sys/select.h (some systems have select() and macros in sys/types.h)
+for ac_header in sys/select.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "sys/select.h" "ac_cv_header_sys_select_h" "$ac_includes_default"
+if test "x$ac_cv_header_sys_select_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_SYS_SELECT_H 1
+_ACEOF
+
+fi
+
+done
+
+
+# Networking headers
+for ac_header in netdb.h arpa/inet.h netinet/in.h netinet/tcp.h
+do :
+  as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
+ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
+if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
+  cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
+_ACEOF
+
+fi
+
+done
 
 
 # Check for SCTP support

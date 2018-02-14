@@ -24,17 +24,21 @@
  * This code is distributed under a BSD style license, see the LICENSE
  * file for complete information.
  */
+#include "iperf_config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
-#include <sys/socket.h>
 #include <sys/types.h>
-#include <netinet/in.h>
-#include <netdb.h>
 #include <sys/time.h>
-#include <sys/select.h>
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
+#ifdef HAVE_NETDB_H
+#include <netdb.h>
+#endif
 
 #include "iperf.h"
 #include "iperf_api.h"
@@ -205,6 +209,7 @@ iperf_tcp_listen(struct iperf_test *test)
                 return -1;
             }
         }
+#ifdef TCP_MAXSEG
         // XXX: Setting MSS is very buggy!
         if ((opt = test->settings->mss)) {
             if (setsockopt(s, IPPROTO_TCP, TCP_MAXSEG, (void *)&opt, sizeof(opt)) < 0) {
@@ -216,6 +221,7 @@ iperf_tcp_listen(struct iperf_test *test)
                 return -1;
             }
         }
+#endif
         if ((opt = test->settings->socket_bufsize)) {
             if (setsockopt(s, SOL_SOCKET, SO_RCVBUF, (void *)&opt, sizeof(opt)) < 0) {
 		saved_errno = errno;
@@ -472,6 +478,7 @@ iperf_tcp_connect(struct iperf_test *test)
             return -1;
         }
     }
+#ifdef TCP_MAXSEG
     if ((opt = test->settings->mss)) {
         if (setsockopt(s, IPPROTO_TCP, TCP_MAXSEG, (void *)&opt, sizeof(opt)) < 0) {
 	    saved_errno = errno;
@@ -482,6 +489,7 @@ iperf_tcp_connect(struct iperf_test *test)
             return -1;
         }
     }
+#endif
     if ((opt = test->settings->socket_bufsize)) {
         if (setsockopt(s, SOL_SOCKET, SO_RCVBUF, (void *)&opt, sizeof(opt)) < 0) {
 	    saved_errno = errno;
@@ -556,8 +564,6 @@ iperf_tcp_connect(struct iperf_test *test)
 	    struct sockaddr_in6* sa6P = (struct sockaddr_in6*) server_res->ai_addr;
             char freq_buf[sizeof(struct in6_flowlabel_req)];
             struct in6_flowlabel_req *freq = (struct in6_flowlabel_req *)freq_buf;
-            int freq_len = sizeof(*freq);
-
             memset(freq, 0, sizeof(*freq));
             freq->flr_label = htonl(test->settings->flowlabel & IPV6_FLOWINFO_FLOWLABEL);
             freq->flr_action = IPV6_FL_A_GET;
@@ -565,7 +571,7 @@ iperf_tcp_connect(struct iperf_test *test)
             freq->flr_share = IPV6_FL_S_ANY;
             memcpy(&freq->flr_dst, &sa6P->sin6_addr, 16);
 
-            if (setsockopt(s, IPPROTO_IPV6, IPV6_FLOWLABEL_MGR, (void *)freq, freq_len) < 0) {
+            if (setsockopt(s, IPPROTO_IPV6, IPV6_FLOWLABEL_MGR, (void *)freq, sizeof(*freq)) < 0) {
 		saved_errno = errno;
                 close(s);
                 freeaddrinfo(server_res);

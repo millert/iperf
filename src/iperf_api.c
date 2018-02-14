@@ -41,17 +41,22 @@
 #include <unistd.h>
 #include <assert.h>
 #include <fcntl.h>
-#include <sys/socket.h>
 #include <sys/types.h>
+#ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
+#endif /* HAVE_NETINET_IN_H */
+#ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
+#endif /* HAVE_ARPA_INET_H */
+#ifdef HAVE_NETDB_H
 #include <netdb.h>
+#endif /* HAVE_NETDB_H */
 #ifdef HAVE_STDINT_H
 #include <stdint.h>
 #endif
-#include <netinet/tcp.h>
-#include <sys/time.h>
+#ifndef __MINGW32__
 #include <sys/resource.h>
+#endif
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sched.h>
@@ -64,10 +69,9 @@
 #endif /* HAVE_CPUSET_SETAFFINITY */
 
 #if defined(HAVE_SETPROCESSAFFINITYMASK)
-#include <Windows.h>
+#include <windows.h>
 #endif /* HAVE_SETPROCESSAFFINITYMASK */
 
-#include "net.h"
 #include "iperf.h"
 #include "iperf_api.h"
 #include "iperf_udp.h"
@@ -75,6 +79,7 @@
 #if defined(HAVE_SCTP)
 #include "iperf_sctp.h"
 #endif /* HAVE_SCTP */
+#include "net.h"
 #include "timer.h"
 
 #include "cjson.h"
@@ -97,6 +102,9 @@ static int JSON_write(int fd, cJSON *json);
 static void print_interval_results(struct iperf_test *test, struct iperf_stream *sp, cJSON *json_interval_streams);
 static cJSON *JSON_read(int fd);
 
+#ifdef __MINGW32__
+const char *inet_ntop(int, const void *, char *, socklen_t); /* no prototype */
+#endif
 
 /*************************** Print usage functions ****************************/
 
@@ -3385,7 +3393,9 @@ diskfile_recv(struct iperf_stream *sp)
     r = sp->rcv2(sp);
     if (r > 0) {
 	(void) write(sp->diskfile_fd, sp->buffer, r);
+#ifndef __MINGW32__
 	(void) fsync(sp->diskfile_fd);
+#endif
     }
     return r;
 }
@@ -3396,7 +3406,9 @@ iperf_catch_sigend(void (*handler)(int))
 {
     signal(SIGINT, handler);
     signal(SIGTERM, handler);
+#ifdef SIGHUP
     signal(SIGHUP, handler);
+#endif
 }
 
 /**

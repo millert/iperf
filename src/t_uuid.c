@@ -24,6 +24,9 @@
  * This code is distributed under a BSD style license, see the LICENSE
  * file for complete information.
  */
+
+#include "iperf_config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

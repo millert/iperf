@@ -27,8 +27,13 @@
  * Based on timers.c by Jef Poskanzer. Used with permission.
  */
 
+#include "iperf_config.h"
+
 #include <sys/types.h>
 #include <stdlib.h>
+#ifdef HAVE_STDINT_H
+#include <stdint.h>
+#endif
 
 #include "timer.h"
 

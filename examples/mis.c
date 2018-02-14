@@ -8,6 +8,7 @@
 #include <stdint.h>
 #endif
 
+#include <iperf.h>
 #include <iperf_api.h>
 
 int
