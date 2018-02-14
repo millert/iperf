@@ -345,7 +345,7 @@ iperf_connect(struct iperf_test *test)
     socklen_t len;
 
     len = sizeof(opt);
-	if (getsockopt(test->ctrl_sck, IPPROTO_TCP, TCP_MAXSEG, &opt, &len) < 0) {
+	if (getsockopt(test->ctrl_sck, IPPROTO_TCP, TCP_MAXSEG, (void *)&opt, &len) < 0) {
 		test->ctrl_sck_mss = 0;
 	}
 	else {

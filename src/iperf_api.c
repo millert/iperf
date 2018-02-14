@@ -3283,7 +3283,7 @@ iperf_init_stream(struct iperf_stream *sp, struct iperf_test *test)
     if ((opt = test->settings->tos)) {
         if (getsockdomain(sp->socket) == AF_INET6) {
 #ifdef IPV6_TCLASS
-            if (setsockopt(sp->socket, IPPROTO_IPV6, IPV6_TCLASS, &opt, sizeof(opt)) < 0) {
+            if (setsockopt(sp->socket, IPPROTO_IPV6, IPV6_TCLASS, (void *)&opt, sizeof(opt)) < 0) {
                 i_errno = IESETCOS;
                 return -1;
             }
@@ -3292,7 +3292,7 @@ iperf_init_stream(struct iperf_stream *sp, struct iperf_test *test)
             return -1;
 #endif
         } else {
-            if (setsockopt(sp->socket, IPPROTO_IP, IP_TOS, &opt, sizeof(opt)) < 0) {
+            if (setsockopt(sp->socket, IPPROTO_IP, IP_TOS, (void *)&opt, sizeof(opt)) < 0) {
                 i_errno = IESETTOS;
                 return -1;
             }

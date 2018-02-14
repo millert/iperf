@@ -186,7 +186,7 @@ iperf_sctp_listen(struct iperf_test *test)
         else if (test->settings->domain == AF_INET6)
             opt = 1;
         if (setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, 
-		       (char *) &opt, sizeof(opt)) < 0) {
+		       (void *)&opt, sizeof(opt)) < 0) {
 	    saved_errno = errno;
 	    close(s);
 	    freeaddrinfo(res);
@@ -198,7 +198,7 @@ iperf_sctp_listen(struct iperf_test *test)
 #endif /* IPV6_V6ONLY */
 
     opt = 1;
-    if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+    if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void *)&opt, sizeof(opt)) < 0) {
         saved_errno = errno;
         close(s);
         freeaddrinfo(res);
@@ -344,7 +344,7 @@ iperf_sctp_connect(struct iperf_test *test)
 
     if (test->no_delay != 0) {
          opt = 1;
-         if (setsockopt(s, IPPROTO_SCTP, SCTP_NODELAY, &opt, sizeof(opt)) < 0) {
+         if (setsockopt(s, IPPROTO_SCTP, SCTP_NODELAY, (void *)&opt, sizeof(opt)) < 0) {
              saved_errno = errno;
              close(s);
              freeaddrinfo(server_res);
@@ -377,7 +377,7 @@ iperf_sctp_connect(struct iperf_test *test)
 #endif
         av.assoc_value = test->settings->mss;
 
-        if (setsockopt(s, IPPROTO_SCTP, SCTP_MAXSEG, &av, sizeof(av)) < 0) {
+        if (setsockopt(s, IPPROTO_SCTP, SCTP_MAXSEG, (void *)&av, sizeof(av)) < 0) {
             saved_errno = errno;
             close(s);
             freeaddrinfo(server_res);
@@ -392,7 +392,7 @@ iperf_sctp_connect(struct iperf_test *test)
 	 * Solaris might not support this option.  If it doesn't work,
 	 * ignore the error (at least for now).
 	 */
-        if (setsockopt(s, IPPROTO_SCTP, SCTP_MAXSEG, &opt, sizeof(opt)) < 0 &&
+        if (setsockopt(s, IPPROTO_SCTP, SCTP_MAXSEG, (void *)&opt, sizeof(opt)) < 0 &&
 	    errno != ENOPROTOOPT) {
             saved_errno = errno;
             close(s);
@@ -410,7 +410,7 @@ iperf_sctp_connect(struct iperf_test *test)
         memset(&initmsg, 0, sizeof(struct sctp_initmsg));
         initmsg.sinit_num_ostreams = test->settings->num_ostreams;
 
-        if (setsockopt(s, IPPROTO_SCTP, SCTP_INITMSG, &initmsg, sizeof(struct sctp_initmsg)) < 0) {
+        if (setsockopt(s, IPPROTO_SCTP, SCTP_INITMSG, (void *)&initmsg, sizeof(struct sctp_initmsg)) < 0) {
                 saved_errno = errno;
                 close(s);
                 freeaddrinfo(server_res);
@@ -454,7 +454,7 @@ iperf_sctp_connect(struct iperf_test *test)
      * work.
      */
     opt = 0;
-    if (setsockopt(s, IPPROTO_SCTP, SCTP_DISABLE_FRAGMENTS, &opt, sizeof(opt)) < 0 &&
+    if (setsockopt(s, IPPROTO_SCTP, SCTP_DISABLE_FRAGMENTS, (void *)&opt, sizeof(opt)) < 0 &&
 	errno != ENOPROTOOPT) {
         saved_errno = errno;
         close(s);

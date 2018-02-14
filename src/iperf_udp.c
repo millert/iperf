@@ -269,11 +269,11 @@ iperf_udp_buffercheck(struct iperf_test *test, int s)
     socklen_t optlen;
     
     if ((opt = test->settings->socket_bufsize)) {
-        if (setsockopt(s, SOL_SOCKET, SO_RCVBUF, &opt, sizeof(opt)) < 0) {
+        if (setsockopt(s, SOL_SOCKET, SO_RCVBUF, (void *)&opt, sizeof(opt)) < 0) {
             i_errno = IESETBUF;
             return -1;
         }
-        if (setsockopt(s, SOL_SOCKET, SO_SNDBUF, &opt, sizeof(opt)) < 0) {
+        if (setsockopt(s, SOL_SOCKET, SO_SNDBUF, (void *)&opt, sizeof(opt)) < 0) {
             i_errno = IESETBUF;
             return -1;
         }
@@ -281,7 +281,7 @@ iperf_udp_buffercheck(struct iperf_test *test, int s)
 
     /* Read back and verify the sender socket buffer size */
     optlen = sizeof(sndbuf_actual);
-    if (getsockopt(s, SOL_SOCKET, SO_SNDBUF, &sndbuf_actual, &optlen) < 0) {
+    if (getsockopt(s, SOL_SOCKET, SO_SNDBUF, (void *)&sndbuf_actual, &optlen) < 0) {
 	i_errno = IESETBUF;
 	return -1;
     }
@@ -303,7 +303,7 @@ iperf_udp_buffercheck(struct iperf_test *test, int s)
 
     /* Read back and verify the receiver socket buffer size */
     optlen = sizeof(rcvbuf_actual);
-    if (getsockopt(s, SOL_SOCKET, SO_RCVBUF, &rcvbuf_actual, &optlen) < 0) {
+    if (getsockopt(s, SOL_SOCKET, SO_RCVBUF, (void *)&rcvbuf_actual, &optlen) < 0) {
 	i_errno = IESETBUF;
 	return -1;
     }
@@ -398,7 +398,7 @@ iperf_udp_accept(struct iperf_test *test)
 	    if (test->debug) {
 		printf("Setting fair-queue socket pacing to %u\n", fqrate);
 	    }
-	    if (setsockopt(s, SOL_SOCKET, SO_MAX_PACING_RATE, &fqrate, sizeof(fqrate)) < 0) {
+	    if (setsockopt(s, SOL_SOCKET, SO_MAX_PACING_RATE, (void *)&fqrate, sizeof(fqrate)) < 0) {
 		warning("Unable to set socket pacing");
 	    }
 	}
@@ -510,7 +510,7 @@ iperf_udp_connect(struct iperf_test *test)
 	    if (test->debug) {
 		printf("Setting fair-queue socket pacing to %u\n", fqrate);
 	    }
-	    if (setsockopt(s, SOL_SOCKET, SO_MAX_PACING_RATE, &fqrate, sizeof(fqrate)) < 0) {
+	    if (setsockopt(s, SOL_SOCKET, SO_MAX_PACING_RATE, (void *)&fqrate, sizeof(fqrate)) < 0) {
 		warning("Unable to set socket pacing");
 	    }
 	}
@@ -529,7 +529,7 @@ iperf_udp_connect(struct iperf_test *test)
     /* 30 sec timeout for a case when there is a network problem. */
     tv.tv_sec = 30;
     tv.tv_usec = 0;
-    setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (struct timeval *)&tv, sizeof(struct timeval));
+    setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (void *)&tv, sizeof(tv));
 #endif
 
     /*
