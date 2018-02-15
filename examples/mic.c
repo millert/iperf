@@ -56,7 +56,7 @@ main( int argc, char** argv )
     }
 
     if (iperf_get_test_json_output_string(test)) {
-	fprintf(iperf_get_test_outfile(test), "%zd bytes of JSON emitted\n",
+	fprintf(iperf_get_test_outfile(test), "%u bytes of JSON emitted\n",
 		strlen(iperf_get_test_json_output_string(test)));
     }
 

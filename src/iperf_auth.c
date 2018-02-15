@@ -250,7 +250,11 @@ int encode_auth_setting(const char *username, const char *password, const char *
     time_t t = time(NULL);
     time_t utc_seconds = mktime(localtime(&t));
     char text[150];
+#ifdef __MINGW32__
+    sprintf (text, "user: %s\npwd:  %s\nts:   %I64d", username, password, utc_seconds);
+#else
     sprintf (text, "user: %s\npwd:  %s\nts:   %ld", username, password, utc_seconds);
+#endif
     unsigned char *encrypted = NULL;
     int encrypted_len;
     encrypted_len = encrypt_rsa_message(text, public_keyfile, &encrypted);
@@ -269,7 +273,11 @@ int decode_auth_setting(int enable_debug, char *authtoken, const char *private_k
     plaintext[plaintext_len] = '\0';
 
     char s_username[20], s_password[20];
+#ifdef __MINGW32__
+    sscanf ((char *)plaintext,"user: %s\npwd:  %s\nts:   %I64d", s_username, s_password, ts);
+#else
     sscanf ((char *)plaintext,"user: %s\npwd:  %s\nts:   %ld", s_username, s_password, ts);
+#endif
     if (enable_debug) {
         printf("Auth Token Content:\n%s\n", plaintext);
         printf("Auth Token Credentials:\n--> %s %s\n", s_username, s_password);
