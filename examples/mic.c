@@ -11,6 +11,12 @@
 #include <iperf.h>
 #include <iperf_api.h>
 
+#if defined __MINGW32__
+#define PRIsize	"Iu"
+#else
+#define PRIsize	"zu"
+#endif
+
 int
 main( int argc, char** argv )
 {
@@ -56,7 +62,7 @@ main( int argc, char** argv )
     }
 
     if (iperf_get_test_json_output_string(test)) {
-	fprintf(iperf_get_test_outfile(test), "%u bytes of JSON emitted\n",
+	fprintf(iperf_get_test_outfile(test), "%" PRIsize " bytes of JSON emitted\n",
 		strlen(iperf_get_test_json_output_string(test)));
     }
 
