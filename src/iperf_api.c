@@ -68,7 +68,7 @@
 #include <sys/cpuset.h>
 #endif /* HAVE_CPUSET_SETAFFINITY */
 
-#if defined(HAVE_SETPROCESSAFFINITYMASK)
+#if defined(HAVE_SETPROCESSAFFINITYMASK) && !defined(__MINGW32__)
 #include <windows.h>
 #endif /* HAVE_SETPROCESSAFFINITYMASK */
 
